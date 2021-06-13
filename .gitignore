@@ -1,0 +1,6 @@
+.idea/
+*.pyc
+*.wav
+dist/
+*.egg-info/
+scripts/Output/
