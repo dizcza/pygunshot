@@ -1,18 +1,31 @@
 #!/usr/bin/python
 
-import pygunshot as pgs
+import numpy as np
+import matplotlib.pyplot as plt
+
+from pygunshot.process import getAnechoicGunShot
+from pygunshot.util import loadDict, recordWave
+from pygunshot.domain import Gun, Geometry
 
 # Load the geometry and ballistic data
-geomd = pgs.loadDict('Geometry/ExampleGeometry.json')
-ballmd = pgs.loadDict('Guns/BrowningBDA380.json')
+geom = Geometry(loadDict('Geometry/ExampleGeometry.json'))
+gun = Gun(loadDict('Guns/BrowningBDA380.json'))
 
 # Set duration and sampling rate
 duration = 0.1
-Fs = 96000.0
+Fs = 96000
 
 # Calculate anechoic signal
-sig, Pmb, Pnw = pgs.getGunShot(geomd, ballmd, duration, Fs)
+Pmb, Pnw = getAnechoicGunShot(geom, gun, duration, Fs)
+
+plt.plot(np.arange(len(Pmb)) / Fs, Pmb)
+plt.xlim([0.05, 0.07])
+plt.xlabel("Time, s")
+plt.ylabel("ΔP, Pa")
+# plt.savefig("Output/example.png")
+plt.show()
+
+# np.savetxt("Output/Pmb.txt", Pmb)
 
 # Save as a normalised WAVE file
-pgs.recordWave('Output/BrowningBDA380_anechoic.wav', sig, Fs)
-
+# recordWave('Output/BrowningBDA380_anechoic.wav', sig, Fs)

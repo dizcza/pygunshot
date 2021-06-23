@@ -19,3 +19,8 @@ See `example.py` under `scripts` folder to get started.
 ####Questions?
 
 Please drop an e-mail to <mailto:husshho@gmail.com>
+
+-----
+
+Bugs in the original version:
+* Incorrectly calculated the cone angle in https://github.com/metu-sparg/pygunshot/blob/master/pygunshot/process.py#L45
