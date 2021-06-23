@@ -24,9 +24,8 @@ def friedlander(time_arr, ta, tau, Pp=1.0, pinf=101e3, csnd=341):
     Ps -- Muzzle blast overpressure signal (numpy array)
     """
     x = (time_arr - ta) / tau
-    # FIXME: why multiply by csnd?
     Ps = np.where(time_arr >= ta,
-                  Pp * pinf * csnd * (1 - x) * np.exp(-x),
+                  Pp * pinf * (1 - x) * np.exp(-x),
                   np.zeros_like(time_arr, dtype=np.float32))
     return Ps
 
@@ -78,9 +77,8 @@ def scaling_length(gun: Gun, theta, csnd=341., gamma=1.24, pinf=101e3):
     dEdt = (gamma * peb * gun.uexit) / (gamma - 1) * (
             1 + (gamma - 1) / 2 * M ** 2) * gun.bore_area
     l = np.sqrt(dEdt / (pinf * csnd))  # Eq. 3
-    ratio = mu * np.cos(theta) + np.sqrt(1 - (mu * np.sin(theta)) ** 2)
-    # FIXME: why multiply by 10???
-    lp = l * ratio * 10
+    ratio = mu * np.cos(theta) + np.sqrt(1 - (mu * np.sin(theta)) ** 2)  # Eq.7
+    lp = l * ratio
     return l, lp
 
 
@@ -97,7 +95,7 @@ def peakOverpressure(r, lp):
     ----------------
     Pb -- Peak overpressure in Pa (float)
     """
-    rb = r / lp
+    rb = r / lp  # Def. 8
     if rb < 50:
         Pb = 0.89 * (lp / r) + 1.61 * (lp / r) ** 2   # Eq. 25
     else:
@@ -120,7 +118,7 @@ def timeOfArrival(r, lp, csnd=341):
     ta --  Time of arrival in s (float)
     
     """
-    rb = r / lp
+    rb = r / lp  # Def. 8
     X = np.sqrt(rb ** 2 + 1.04 * rb + 1.88)
     ta_norm = X - 0.52 * np.log(2 * X + 2 * rb + 1.04) - 0.56  # Eq. 27
     ta = ta_norm * lp / csnd  # Eq. 15
@@ -146,7 +144,7 @@ def positivePhaseDuration(r, lp, l, L, Vp, csnd=341.):
     tau -- Positive phase duration in s (float)
     
     """
-    rb = r / lp
+    rb = r / lp  # Def. 8
     X = np.sqrt(rb ** 2 + 1.04 * rb + 1.88)
     delta = (L * csnd) / (Vp * l)  # Blow-down parameter, eq. 10
     G = 0.09 - 0.00379 * delta + 1.07 * (

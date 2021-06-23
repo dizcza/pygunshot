@@ -41,9 +41,8 @@ class Gun:
         """
         pe = utl.convertPressureToPascals(self.pexit)
         pe /= 101e3  # normalize to [0, 1] range
-        xmod = M * math.sqrt(gamma * pe / 2)
-        # FIXME: mu = 0.83 - 0.0063 * xmod  # Eq. 26
-        mu = 0.87 - 0.01 * xmod
+        xmod = M * math.sqrt(gamma * pe / 2)  # Eq. 11
+        mu = 0.83 - 0.0063 * xmod  # Eq. 26
         return mu
 
     def cone_angle(self, M):
