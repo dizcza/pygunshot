@@ -9,7 +9,7 @@ from pygunshot.domain import Gun, Geometry
 
 # Load the geometry and ballistic data
 geom = Geometry(loadDict('Geometry/ExampleGeometry.json'))
-gun = Gun(loadDict('Guns/BrowningBDA380.json'))
+gun = Gun(loadDict('Guns/300ShortMagnum.json'))
 
 # Set duration and sampling rate
 duration = 0.1

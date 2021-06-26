@@ -169,7 +169,7 @@ def nWave(xgun, ngun, xmic, v, d, l, x, t):
     return wv
 
 
-def calculateNWave(time_arr, gun: Gun, geometry: Geometry):
+def calculateNWave(t_interval, gun: Gun, geometry: Geometry):
     """
     Calculate N-wave signal
     
@@ -187,9 +187,9 @@ def calculateNWave(time_arr, gun: Gun, geometry: Geometry):
     ----------------
     nw -- N-wave signal (numpy array)
     """
-    wv = np.zeros(len(time_arr))
+    wv = np.zeros(len(t_interval))
     r, theta = geometry.mic_coords_polar()
     xmiss = r * np.sin(theta)
-    for ind in range(len(time_arr)):
-        wv[ind] = nWave(geometry.xgun, geometry.ngun, geometry.xmic, gun.uexit, gun.bulletDiam, gun.bulletLen, xmiss, time_arr[ind])
+    for ind in range(len(t_interval)):
+        wv[ind] = nWave(geometry.xgun, geometry.ngun, geometry.xmic, gun.velocity, gun.bulletDiam, gun.bulletLen, xmiss, t_interval[ind])
     return wv

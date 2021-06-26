@@ -2,41 +2,60 @@
 
 import numpy as np
 
-import pygunshot.util as utl
-
 from pygunshot.domain import Gun
 
 
-def friedlander(time_arr, ta, tau, Pp=1.0, pinf=101e3, csnd=341):
+def friedlanderMW(t_interval, ta, amplitude, tau=0.05):
     """
-    Calculate Friedlander wave
-    
-    Parameters:
-    ----------------
-    t -- Time (numpy array)
-    ta -- Arrival time (float)
-    tau -- Positive phase duration (float)
-    Pp -- Peak overpressure (float)
-    pinf -- atmospheric pressure at t=inf (float)
+    Friedlander model to calculate a muzzle blast wave.
 
-    Returns:
-    ----------------
-    Ps -- Muzzle blast overpressure signal (numpy array)
+    Parameters
+    ----------
+    t_interval -- Time, s (numpy array)
+    ta -- Arrival time, s (float)
+    tau -- Positive phase duration, s (float)
+    amplitude -- Amplitude, Pa (float)
+
+    Returns
+    -------
+    Pmb -- estimated muzzle blast pressure along the given time intervals
     """
-    x = (time_arr - ta) / tau
-    Ps = np.where(time_arr >= ta,
-                  Pp * pinf * (1 - x) * np.exp(-x),
-                  np.zeros_like(time_arr, dtype=np.float32))
-    return Ps
+    x = (t_interval - ta) / tau
+    Pmb = amplitude * (1 - x) * np.exp(-x)
+    Pmb[t_interval < ta] = 0
+    return Pmb
 
 
-def calculate_muzzleblast(time_arr, gun: Gun, r, theta, csnd=341., gamma=1.24):
+def berlageMW(t_interval, ta, amplitude, nr=5, alpha=0.52, freq=20):
+    """
+    Berlage model to calculate a muzzle blast wave.
+
+    Parameters
+    ----------
+    t_interval -- equally spaced time array in s
+    ta -- the time of arrival in s
+    amplitude -- the pressure amplitude in Pa
+    nr -- the rate of rising of the front edge of the MW
+    alpha -- the attenuation rate of the MW
+    freq -- the dominant frequency of the MW
+
+    Returns
+    -------
+    Pmb -- estimated muzzle blast pressure along the given time intervals
+    """
+    t = t_interval - ta
+    Pmb = amplitude * t ** nr * np.exp(-alpha * t) * np.sin(freq * t)
+    Pmb[t_interval < ta] = 0
+    return Pmb
+
+
+def getMuzzleBlastAtDistance(t_interval, gun: Gun, r, theta, csnd=341., gamma=1.24):
     """
     Calculate the muzzle blast component of the gunshot sound given ballistic parameters
 
     Parameters
     ----------
-    time_arr -- Time array in seconds
+    t_interval -- Time array in seconds
     gun -- The barrel
     mu -- Momentum index (float)
     r -- Distance to the microphone from the gun (float)
@@ -47,34 +66,35 @@ def calculate_muzzleblast(time_arr, gun: Gun, r, theta, csnd=341., gamma=1.24):
     -------
     Pmb -- Muzzle blast signal (numpy array)
     """
-    l, lp = scaling_length(gun, theta=theta, csnd=csnd, gamma=gamma)
+    l, lp = scalingLength(gun, theta=theta, csnd=csnd, gamma=gamma)
     ta = timeOfArrival(r, lp)
-    tau = positivePhaseDuration(r, lp=lp, l=l, L=gun.barrelLength,
-                                Vp=gun.uexit, csnd=csnd)
+    tau = positivePhaseDuration(r, lp=lp, l=l, barrelLen=gun.barrelLen,
+                                velocity=gun.velocity, csnd=csnd)
     Pb = peakOverpressure(r, lp)
-    Pmb = friedlander(time_arr, ta, tau, Pb)
+    Pmb = friedlanderMW(t_interval, ta, amplitude=Pb * 101e3, tau=tau)
+    Pmb2 = berlageMW(t_interval, ta, amplitude=Pb * 101e3)
     return Pmb
 
 
-def scaling_length(gun: Gun, theta, csnd=341., gamma=1.24, pinf=101e3):
+def scalingLength(gun: Gun, theta, csnd=341., gamma=1.24, pinf=101e3):
     """
     Calculate the scaling length and the direction weighted scaling length
     
-    Parameters:
-    ----------------
+    Parameters
+    ----------
     theta -- Angle between the boreline and the microphone position in radians (float)
     gamma -- Specific heat ratio (float)
 
-    Returns:
-    ----------------
+    Returns
+    -------
     l -- Scaling length (float)
     lp -- Weighted scaling length (float)
     """
     M = gun.mach_number(csnd)
     mu = gun.momentum_index(M, gamma=gamma)
-    peb = utl.convertPressureToPascals(gun.pexit) / pinf
+    peb = gun.pexit / pinf
     # Energy deposition rate, eq. 2
-    dEdt = (gamma * peb * gun.uexit) / (gamma - 1) * (
+    dEdt = (gamma * peb * gun.velocity) / (gamma - 1) * (
             1 + (gamma - 1) / 2 * M ** 2) * gun.bore_area
     l = np.sqrt(dEdt / (pinf * csnd))  # Eq. 3
     ratio = mu * np.cos(theta) + np.sqrt(1 - (mu * np.sin(theta)) ** 2)  # Eq.7
@@ -86,13 +106,13 @@ def peakOverpressure(r, lp):
     """
     Calculate the peak overpressure of the muzzle blast
     
-    Parameters:
-    ----------------
+    Parameters
+    ----------
     r -- Distance from the muzzle in m (float)
     lp -- Weighted scaling length (float)
 
-    Returns:
-    ----------------
+    Returns
+    -------
     Pb -- Peak overpressure in Pa (float)
     """
     rb = r / lp  # Def. 8
@@ -101,20 +121,20 @@ def peakOverpressure(r, lp):
     else:
         Pb = 3.48975 / (rb * np.sqrt(np.log(33119.0 * rb)))  # Eq. 31
 
-    return Pb / 100
+    return Pb
 
 
 def timeOfArrival(r, lp, csnd=341):
     """
     Calculate the time of arrival of the muzzle blast
     
-    Parameters:
-    ----------------
+    Parameters
+    ----------
     r -- Distance from the muzzle in m (float)
-    lsn -- Weighted scaling length (float)
+    lp -- Weighted scaling length (float)
 
-    Returns:
-    ----------------
+    Returns
+    -------
     ta --  Time of arrival in s (float)
     
     """
@@ -125,28 +145,26 @@ def timeOfArrival(r, lp, csnd=341):
     return ta
 
 
-def positivePhaseDuration(r, lp, l, L, Vp, csnd=341.):
+def positivePhaseDuration(r, lp, l, barrelLen, velocity, csnd=341.):
     """
-    positivePhaseDuration(measurementDistance, scalingLength, unscaledScalingLength, boreLengthInMeters, exitSpeedOfProjectile):
-    
     Calculate the positive phase duration of the muzzle blast
     
-    Parameters:
-    ----------------
+    Parameters
+    ----------
     r -- Distance from the muzzle in m (float)
     lp -- Weighted scaling length (float)
     l -- Scaling length (float)
-    L -- Barrel length in m (float)
-    Vp -- Exit speed of projectile in m/s (float)
+    barrelLen -- Barrel length in m (float)
+    velocity -- Exit speed of projectile in m/s (float)
 
-    Returns:
-    ----------------
+    Returns
+    -------
     tau -- Positive phase duration in s (float)
     
     """
     rb = r / lp  # Def. 8
     X = np.sqrt(rb ** 2 + 1.04 * rb + 1.88)
-    delta = (L * csnd) / (Vp * l)  # Blow-down parameter, eq. 10
+    delta = (barrelLen * csnd) / (velocity * l)  # Blow-down parameter, eq. 10
     G = 0.09 - 0.00379 * delta + 1.07 * (
                 1 - 1.36 * np.exp(-0.049 * rb)) * l / lp  # Eq. 28
     if rb < 50:

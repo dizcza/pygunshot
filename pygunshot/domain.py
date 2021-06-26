@@ -11,22 +11,22 @@ class Gun:
 
     bulletDiam -- Bullet diameter in m (float)
     bulletLen -- Bullet length in m (float)
-    barrelLength -- Barrel length of the gun (float)
-    uexit -- Exit velocty of the bullet in m/s (float)
+    barrelLen -- Barrel length of the gun (float)
+    velocity -- Exit velocity of the bullet in m/s (float)
     """
     def __init__(self, ballistDict):
         self.bulletDiam = ballistDict['bulletDiam']
         self.bulletLen = ballistDict['bulletLen']
-        self.barrelLength = ballistDict['barrelLength']
-        self.pexit = ballistDict['pexit']
-        self.uexit = ballistDict['uexit']
+        self.barrelLen = ballistDict['barrelLen']
+        self.pexit = 98066.5 * ballistDict['pexit']
+        self.velocity = ballistDict['velocity']
         self.gunlabel = ballistDict.get('gunlabel')
         self.ammolabel = ballistDict.get('ammolabel')
 
     def mach_number(self, csnd=341.):
-        return self.uexit / csnd
+        return self.velocity / csnd
 
-    def momentum_index(self, M, gamma=1.24):
+    def momentum_index(self, M, gamma=1.24, pinf=101e3):
         """
         Calculate the momentum index.
 
@@ -39,8 +39,7 @@ class Gun:
         -------
         mu -- Momentum index (float)
         """
-        pe = utl.convertPressureToPascals(self.pexit)
-        pe /= 101e3  # normalize to [0, 1] range
+        pe = self.pexit / pinf
         xmod = M * math.sqrt(gamma * pe / 2)  # Eq. 11
         mu = 0.83 - 0.0063 * xmod  # Eq. 26
         return mu
@@ -86,7 +85,7 @@ class Geometry:
         self.label = geomDict.get('label')
 
     def mic_coords_polar(self):
-        mic_direction = self.xmic - self.xgun  # gun at the origin
-        r = np.linalg.norm(mic_direction)  # distance to the mic
-        theta = np.arccos(np.dot(mic_direction, self.ngun) / r)
+        mic_vec = self.xmic - self.xgun  # gun at the origin
+        r = np.linalg.norm(mic_vec)  # distance to the mic
+        theta = np.arccos(np.dot(mic_vec, self.ngun) / r)
         return r, theta
