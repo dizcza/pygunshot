@@ -166,6 +166,15 @@ namespace GunShot {
 
     /***************** ENVIRONMENT *****************/
 
+    /* Initialize the Geometry structure.
+     *
+     * @param geometry - Geometry object to be initialized
+     * @param xgun - gun 3D coordinates
+     * @param xmic - mic 3D coordinates
+     * @param ngun - gun barren look 3D direction
+     */
+    void initGeometry(Geometry &geometry, const float *xgun, const float *xmic, const float *ngun);
+
     /* Get polar coordinates (r and theta) of the mic w.r.t. the barrel.
      *
      * @param r        - (to be written) the distance between the gun and the microphone

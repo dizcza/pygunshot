@@ -3,6 +3,7 @@ import numpy as np
 import pygunshot.muzzleblast  as mb
 import pygunshot.nwave as nw
 from pygunshot.domain import Gun, Geometry
+from pygunshot.atmoshpere import atmosphericAttenuation
 
 
 def getAnechoicGunShot(geometry: Geometry, gun: Gun, duration, Fs=96000,
@@ -25,6 +26,7 @@ def getAnechoicGunShot(geometry: Geometry, gun: Gun, duration, Fs=96000,
     t_interval = np.linspace(0, duration, num=int(duration * Fs))
     Pmb = mb.getMuzzleBlastAtDistance(t_interval, gun, r, theta, csnd=csnd,
                                       gamma=gamma)
+    Pmb = atmosphericAttenuation(Pmb, distance=r, Fs=Fs)
 
     Pnw = None
     M = gun.mach_number(csnd)

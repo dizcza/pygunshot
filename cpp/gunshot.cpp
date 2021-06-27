@@ -61,6 +61,13 @@ namespace GunShot {
         return asin(1.f / M);
     }
 
+    /* Initialize the Geometry structure.
+     *
+     * @param geometry - Geometry object to be initialized
+     * @param xgun - gun 3D coordinates
+     * @param xmic - mic 3D coordinates
+     * @param ngun - gun barren look 3D direction
+     */
     void initGeometry(Geometry &geometry, const float *xgun, const float *xmic, const float *ngun) {
         float ngun_norm = ngun[0] * ngun[0] + ngun[1] * ngun[1] + ngun[2] * ngun[2];
         ngun_norm = sqrt(ngun_norm);

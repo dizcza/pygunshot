@@ -1,3 +1,4 @@
-Numpy==1.10.4
-Scipy==0.17.1
-json==2.0.9
+numpy
+scipy
+matplotlib
+acoustics

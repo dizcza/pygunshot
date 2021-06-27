@@ -5,6 +5,22 @@ import numpy as np
 from pygunshot.domain import Gun
 
 
+def seismicPulse(t_interval, ta, c, A, k, X, omega, theta, V, T):
+    """
+    Seismic pulse general model [1]_.
+
+    References
+    ----------
+    1. Rabinovich, E. V., Filipenko, N. Y., & Shefel, G. S. (2018, May).
+       Generalized model of seismic pulse. In Journal of Physics: Conference
+       Series (Vol. 1015, No. 5, p. 052025). IOP Publishing.
+    """
+    t = t_interval - ta
+    Pmb = c * A * np.cos(k * X - omega * t + theta) / np.cosh((X - V * t) / T)
+    Pmb[t_interval < ta] = 0
+    return Pmb
+
+
 def friedlanderMW(t_interval, ta, amplitude, tau=0.05):
     """
     Friedlander model to calculate a muzzle blast wave.
@@ -26,7 +42,7 @@ def friedlanderMW(t_interval, ta, amplitude, tau=0.05):
     return Pmb
 
 
-def berlageMW(t_interval, ta, amplitude, nr=5, alpha=0.52, freq=20):
+def berlageMW(t_interval, ta, amplitude, nr=5, alpha=0.52, freq=20, phase=0):
     """
     Berlage model to calculate a muzzle blast wave.
 
@@ -44,7 +60,7 @@ def berlageMW(t_interval, ta, amplitude, nr=5, alpha=0.52, freq=20):
     Pmb -- estimated muzzle blast pressure along the given time intervals
     """
     t = t_interval - ta
-    Pmb = amplitude * t ** nr * np.exp(-alpha * t) * np.sin(freq * t)
+    Pmb = amplitude * t ** nr * np.exp(-alpha * t) * np.sin(freq * t + phase)
     Pmb[t_interval < ta] = 0
     return Pmb
 
