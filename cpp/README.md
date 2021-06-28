@@ -32,9 +32,10 @@ plt.show()
   - [ainf - the speed of sound - is not a part of the Friedlander amplitude](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/muzzleblast.py#L27) according to [1,3]
   - [do not divide Pb by 100](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/muzzleblast.py#L158) according to [3]
   - [do not multiply lp by 10](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/muzzleblast.py#L113) according to [3]
+  - [`coneAngle(M)`, not `coneAngle(uexit)`](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/process.py#L45) according to [3]
   - [wrong coefficients in the momentum index](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/muzzleblast.py#L133) according to [3]
   
-  With these bugs fixed, however, the simulated muzzle blast at the mic is over-squeezed (the positive phase duration is very small). If we want to have a model that outputs a signal that *looks good*, we need to revert some of these bugs back.
+  With these bugs fixed, however, the simulated muzzle blast at the mic is over-squeezed (the positive phase duration is very small). The fix I made is to not divide the peak muzzle pressure `pe` by the atmospheric pressure `pinf` as in the [original implementation](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/muzzleblast.py#L111). Why? Read Eq. 2 in [3] and its description. You will notice that there is a typo either in the equation or in the description. In either case, the scaling length is proportional up to a constant according to the Eq. 3. The best way to find out this constant is to fit real data.
   
 * The default parameters of a Berlage wave claimed in [2] do not produce the nice picture shown in the paper.
 

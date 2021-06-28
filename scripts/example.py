@@ -19,7 +19,7 @@ Fs = 96000
 Pmb, Pnw = getAnechoicGunShot(geom, gun, duration, Fs)
 
 plt.plot(np.arange(len(Pmb)) / Fs, Pmb)
-plt.xlim([0.05, 0.07])
+# plt.xlim([0.05, 0.07])
 plt.xlabel("Time, s")
 plt.ylabel("ΔP, Pa")
 # plt.savefig("Output/example.png")

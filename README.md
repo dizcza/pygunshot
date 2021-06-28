@@ -1,4 +1,4 @@
-##PyGun: Procedural Generation of Anechoic Gunshot Sounds
+#PyGunShot: Procedural Generation of Anechoic Gunshot Sounds
 
 This project contains the PyGunshot module which includes several functions to generate anechoic gunshot sounds for games and simulations. The ballistic parameters should be provided (or generated procedurally) as well as the geometry which includes the gun and microphone positions. 
 
@@ -6,21 +6,20 @@ This project contains the PyGunshot module which includes several functions to g
 
 This code accompanies the chapter:
 
-######Hacıhabiboğlu, H., "Procedural Generation of Gunshot Sounds based on Physically-motivated Models" in *Procedural Content Generation in the Games Industry*, Eds. Oliver Korn and Newton Lee, Springer Verlag, 2017 (to appear)
+> Hacıhabiboğlu, H., "Procedural Generation of Gunshot Sounds based on Physically-motivated Models" in *Procedural Content Generation in the Games Industry*, Eds. Oliver Korn and Newton Lee, Springer Verlag, 2017 (to appear)
 
-####Installation
+### Installation
 
 `pip install pygunshot`
 
-####Usage
+### C++
+
+Refer to the [cpp](./cpp) folder.
+
+### Usage
 
 See `example.py` under `scripts` folder to get started.
 
-####Questions?
+### Questions?
 
 Please drop an e-mail to <mailto:husshho@gmail.com>
-
------
-
-Bugs in the original version:
-* Incorrectly calculated the cone angle in https://github.com/metu-sparg/pygunshot/blob/master/pygunshot/process.py#L45

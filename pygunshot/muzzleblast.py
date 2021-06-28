@@ -88,7 +88,7 @@ def getMuzzleBlastAtDistance(t_interval, gun: Gun, r, theta, csnd=341., gamma=1.
                                 velocity=gun.velocity, csnd=csnd)
     Pb = peakOverpressure(r, lp)
     Pmb = friedlanderMW(t_interval, ta, amplitude=Pb * 101e3, tau=tau)
-    Pmb2 = berlageMW(t_interval, ta, amplitude=Pb * 101e3)
+    # Pmb2 = berlageMW(t_interval, ta, amplitude=Pb * 101e3)
     return Pmb
 
 
@@ -108,7 +108,8 @@ def scalingLength(gun: Gun, theta, csnd=341., gamma=1.24, pinf=101e3):
     """
     M = gun.mach_number(csnd)
     mu = gun.momentum_index(M, gamma=gamma)
-    peb = gun.pexit / pinf
+    # TODO originally was pexit/pinf
+    peb = gun.pexit
     # Energy deposition rate, eq. 2
     dEdt = (gamma * peb * gun.velocity) / (gamma - 1) * (
             1 + (gamma - 1) / 2 * M ** 2) * gun.bore_area

@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def atmosphericAttenuation(signal, distance, Fs, **kwargs):
     """
     Apply atmospheric absorption to the `signal` by convolving it with the
