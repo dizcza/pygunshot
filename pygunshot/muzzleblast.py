@@ -29,8 +29,8 @@ def friedlanderMW(t_interval, ta, amplitude, tau=0.05):
     ----------
     t_interval -- Time, s (numpy array)
     ta -- Arrival time, s (float)
-    tau -- Positive phase duration, s (float)
     amplitude -- Amplitude, Pa (float)
+    tau -- Positive phase duration, s (float)
 
     Returns
     -------
@@ -65,40 +65,46 @@ def berlageMW(t_interval, ta, amplitude, nr=5, alpha=0.52, freq=20, phase=0):
     return Pmb
 
 
-def getMuzzleBlastAtDistance(t_interval, gun: Gun, r, theta, csnd=341., gamma=1.24):
+def muzzleBlast(t_interval, gun: Gun, distance, theta, patm=101e3, csnd=341,
+                gamma=1.24):
     """
-    Calculate the muzzle blast component of the gunshot sound given ballistic parameters
+    Calculate the muzzle blast component of a gunshot sound at the specified
+    distance (where a mic is located) given ballistic parameters
 
     Parameters
     ----------
     t_interval -- Time array in seconds
     gun -- The barrel
-    mu -- Momentum index (float)
-    r -- Distance to the microphone from the gun (float)
-    theta -- Angle between the boreline and the microphone position in radians (float)
+    mu -- Momentum index
+    distance -- Distance to the microphone from the gun
+    theta -- Angle between the boreline and the microphone position in rads
+    patm -- Atmospheric pressure in Pa
+    csnd -- Speed of sound in m/s
     gamma -- Specific heat ratio (float)
 
     Returns
     -------
     Pmb -- Muzzle blast signal (numpy array)
     """
-    l, lp = scalingLength(gun, theta=theta, csnd=csnd, gamma=gamma)
-    ta = timeOfArrival(r, lp)
-    tau = positivePhaseDuration(r, lp=lp, l=l, barrelLen=gun.barrelLen,
+    l, lp = scalingLength(gun, theta, patm=patm, csnd=csnd, gamma=gamma)
+    ta = timeOfArrival(distance, lp, csnd=csnd)
+    tau = positivePhaseDuration(distance, lp=lp, l=l, barrelLen=gun.barrelLen,
                                 velocity=gun.velocity, csnd=csnd)
-    Pb = peakOverpressure(r, lp)
-    Pmb = friedlanderMW(t_interval, ta, amplitude=Pb * 101e3, tau=tau)
-    # Pmb2 = berlageMW(t_interval, ta, amplitude=Pb * 101e3)
+    Pb = peakOverpressure(distance, lp)
+    Pmb = friedlanderMW(t_interval, ta, amplitude=Pb * patm, tau=tau)
     return Pmb
 
 
-def scalingLength(gun: Gun, theta, csnd=341., gamma=1.24, pinf=101e3):
+def scalingLength(gun: Gun, theta, patm=101e3, csnd=341., gamma=1.24):
     """
     Calculate the scaling length and the direction weighted scaling length
     
     Parameters
     ----------
-    theta -- Angle between the boreline and the microphone position in radians (float)
+    theta -- Angle between the boreline and the microphone position in rads
+    gamma -- Specific heat ratio (float)
+    patm -- Atmospheric pressure in Pa
+    csnd -- Speed of sound in m/s
     gamma -- Specific heat ratio (float)
 
     Returns
@@ -108,12 +114,13 @@ def scalingLength(gun: Gun, theta, csnd=341., gamma=1.24, pinf=101e3):
     """
     M = gun.mach_number(csnd)
     mu = gun.momentum_index(M, gamma=gamma)
-    # TODO originally was pexit/pinf
-    peb = gun.pexit
+    peb = gun.pexit / patm
     # Energy deposition rate, eq. 2
     dEdt = (gamma * peb * gun.velocity) / (gamma - 1) * (
             1 + (gamma - 1) / 2 * M ** 2) * gun.bore_area
-    l = np.sqrt(dEdt / (pinf * csnd))  # Eq. 3
+    l = np.sqrt(dEdt / (patm * csnd))  # Eq. 3
+    # TODO: find a better constant for the scaling length
+    l *= 10
     ratio = mu * np.cos(theta) + np.sqrt(1 - (mu * np.sin(theta)) ** 2)  # Eq.7
     lp = l * ratio
     return l, lp
@@ -147,13 +154,13 @@ def timeOfArrival(r, lp, csnd=341):
     
     Parameters
     ----------
-    r -- Distance from the muzzle in m (float)
-    lp -- Weighted scaling length (float)
+    r -- Distance from the muzzle in m
+    lp -- Weighted scaling length
+    csnd -- Speed of sound in m/s
 
     Returns
     -------
-    ta --  Time of arrival in s (float)
-    
+    ta --  Time of arrival in s
     """
     rb = r / lp  # Def. 8
     X = np.sqrt(rb ** 2 + 1.04 * rb + 1.88)
@@ -173,6 +180,7 @@ def positivePhaseDuration(r, lp, l, barrelLen, velocity, csnd=341.):
     l -- Scaling length (float)
     barrelLen -- Barrel length in m (float)
     velocity -- Exit speed of projectile in m/s (float)
+    csnd -- Speed of sound in m/s
 
     Returns
     -------

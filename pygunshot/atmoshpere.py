@@ -1,6 +1,22 @@
 import numpy as np
 
 
+def sound_speed(temperature=20):
+    """
+    Calculate the speed of sound adjusted by the air temperature
+
+    Parameters
+    ----------
+    temperature -- air temperature in Celsius
+
+    Returns
+    -------
+    csnd -- speed of sound in m/s
+    """
+    csnd = 331.3 * np.sqrt(1 + temperature / 273.15)
+    return csnd
+
+
 def atmosphericAttenuation(signal, distance, Fs, **kwargs):
     """
     Apply atmospheric absorption to the `signal` by convolving it with the
@@ -29,7 +45,6 @@ def atmosphericAttenuation(signal, distance, Fs, **kwargs):
 
 
 if __name__ == '__main__':
-    import numpy as np
     import matplotlib.pyplot as plt
     from pygunshot.muzzleblast import friedlanderMW
 

@@ -1,8 +1,7 @@
 import math
 
 import numpy as np
-
-import pygunshot.util as utl
+import matplotlib.pyplot as plt
 
 
 class Gun:
@@ -26,7 +25,7 @@ class Gun:
     def mach_number(self, csnd=341.):
         return self.velocity / csnd
 
-    def momentum_index(self, M, gamma=1.24, pinf=101e3):
+    def momentum_index(self, M, gamma=1.24, patm=101e3):
         """
         Calculate the momentum index.
 
@@ -39,12 +38,13 @@ class Gun:
         -------
         mu -- Momentum index (float)
         """
-        pe = self.pexit / pinf
+        pe = self.pexit / patm
         xmod = M * math.sqrt(gamma * pe / 2)  # Eq. 11
         mu = 0.83 - 0.0063 * xmod  # Eq. 26
         return mu
 
-    def cone_angle(self, M):
+    @staticmethod
+    def cone_angle(M):
         """
         Calculate the cone angle.
 
@@ -85,7 +85,68 @@ class Geometry:
         self.label = geomDict.get('label')
 
     def mic_coords_polar(self):
+        """
+        Returns
+        -------
+        r -- the dist to the mic in m
+        theta -- the angle between the gun look and the mic in rads
+        """
         mic_vec = self.xmic - self.xgun  # gun at the origin
         r = np.linalg.norm(mic_vec)  # distance to the mic
         theta = np.arccos(np.dot(mic_vec, self.ngun) / r)
         return r, theta
+
+    @property
+    def xmiss(self):
+        """
+        Returns
+        -------
+        xmiss -- dist from the mic to the bullet trajectory in m
+        """
+        r, theta = self.mic_coords_polar()
+        xmiss = r * np.sin(theta)
+        return xmiss
+
+    def plot_geometry(self, cone_angle=None):
+        """
+        Plot the gun and the mic (observer) in 2D.
+
+        Parameters
+        ----------
+        cone_angle -- Mach cone angle in rads, optional
+        """
+        fig, ax = plt.subplots()
+        ax.set_aspect('equal', 'box')
+        ax.scatter(*self.xgun[:2], s=100, marker='H',
+                   label=f'gun (z={self.xgun[2]} m)')
+        ax.scatter(*self.xmic[:2], s=90, marker='D',
+                   label=f'mic (z={self.xmic[2]} m)')
+        mic_vec = self.xmic - self.xgun  # gun at the origin
+        r = np.linalg.norm(mic_vec)  # distance to the mic
+        ngun = 0.1 * r * self.ngun[:2]
+        ax.arrow(*self.xgun[:2], *ngun, head_width=0.02 * r, color='black',
+                 zorder=-1)
+
+        # autoscale fix to mind the text positions.
+        # See https://stackoverflow.com/questions/11545062/
+        # matplotlib-autoscale-axes-to-include-annotations
+        plt.get_current_fig_manager().canvas.draw()
+        for handle in [ax.legend()]:
+            bbox = handle.get_window_extent()
+            bbox_data = bbox.transformed(ax.transData.inverted())
+            ax.update_datalim(bbox_data.corners())
+        ax.autoscale_view()
+
+        if cone_angle is not None:
+            for angle in (cone_angle, -cone_angle):
+                s, c = np.sin(angle), np.cos(angle)
+                mrot = np.array(((c, -s), (s, c)))
+                mach_tail = mrot.dot(-ngun) + self.xgun[:2]
+                ax.plot([mach_tail[0], self.xgun[0]],
+                        [mach_tail[1], self.xgun[1]],
+                        color='black', ls='--', lw=1)
+
+        ax.grid()
+        ax.set_xlabel('x, m')
+        ax.set_ylabel('y, m')
+        return ax

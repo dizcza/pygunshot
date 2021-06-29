@@ -1,37 +1,41 @@
 import numpy as np
 
-import pygunshot.muzzleblast  as mb
-import pygunshot.nwave as nw
-from pygunshot.domain import Gun, Geometry
 from pygunshot.atmoshpere import atmosphericAttenuation
+from pygunshot.domain import Gun, Geometry
+from pygunshot.muzzleblast import muzzleBlast
+from pygunshot.nwave import nWave
 
 
-def getAnechoicGunShot(geometry: Geometry, gun: Gun, duration, Fs=96000,
-                       csnd=341., gamma=1.24):
+def getAnechoicGunShot(t_interval, geometry: Geometry, gun: Gun, Fs=96000,
+                       patm=101e3, csnd=341., gamma=1.24):
     """
     Get anechoic gunshot
     
     Parameters
     ----------
-    geomDict -- Dictionary containing the scene geometry (dict)
-    ballistDict -- Dictionary containing the ballistic information (dict)
-    duration -- Duration of the output signal in s (float)
+    t_interval -- Time array in seconds
+    geometry -- Geometry object (gun and mic coordinates)
+    gun -- The firearm
     Fs -- Sampling rate in Hz (int)
+    patm -- atmospheric pressure in Pa
+    csnd -- speed of sound in m/s
+    gamma -- specific heat ratio
 
     Returns
     -------
-    sig -- Anechoic gunshot sound signal 
+    sig -- Total anechoic gunshot sound signal (with atmospheric absorption)
+    Pmb -- Muzzle blast component
+    Pnw -- N-wave component
     """
     r, theta = geometry.mic_coords_polar()
-    t_interval = np.linspace(0, duration, num=int(duration * Fs))
-    Pmb = mb.getMuzzleBlastAtDistance(t_interval, gun, r, theta, csnd=csnd,
-                                      gamma=gamma)
-    Pmb = atmosphericAttenuation(Pmb, distance=r, Fs=Fs)
+    Pmb = muzzleBlast(t_interval, gun, distance=r, theta=theta, patm=patm,
+                      csnd=csnd, gamma=gamma)
+    sig = Pmb.copy()
 
-    Pnw = None
-    M = gun.mach_number(csnd)
-    cone_angle = gun.cone_angle(M)
-    if gun.velocity > csnd and (theta < np.pi - cone_angle):  # We have sonic boom
-        Pnw = nw.calculateNWave(t_interval, gun, geometry)
+    Pnw = nWave(t_interval, gun, geometry, patm=patm, csnd=csnd)
+    if Pnw is not None:
+        sig += Pnw
 
-    return Pmb, Pnw
+    sig = atmosphericAttenuation(sig, distance=r, Fs=Fs)
+
+    return sig, Pmb, Pnw

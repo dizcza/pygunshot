@@ -35,7 +35,7 @@ plt.show()
   - [`coneAngle(M)`, not `coneAngle(uexit)`](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/process.py#L45) according to [3]
   - [wrong coefficients in the momentum index](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/muzzleblast.py#L133) according to [3]
   
-  With these bugs fixed, however, the simulated muzzle blast at the mic is over-squeezed (the positive phase duration is very small). The fix I made is to not divide the peak muzzle pressure `pe` by the atmospheric pressure `pinf` as in the [original implementation](https://github.com/metu-sparg/pygunshot/blob/76004698fc5b5f7c34012ff0983fd6da094d272a/pygunshot/muzzleblast.py#L111). Why? Read Eq. 2 in [3] and its description. You will notice that there is a typo either in the equation or in the description. In either case, the scaling length is proportional up to a constant according to the Eq. 3. The best way to find out this constant is to fit real data.
+  With these bugs fixed, however, the simulated muzzle blast at the mic is over-squeezed (the positive phase duration is very small). A dirty fix is to multiply the scaling length `l` by 10. A better fix would be a fit to real data.
   
 * The default parameters of a Berlage wave claimed in [2] do not produce the nice picture shown in the paper.
 

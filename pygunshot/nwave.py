@@ -4,177 +4,102 @@ import numpy as np
 
 from pygunshot.domain import Gun, Geometry
 
-def MachNumber(v):
-    """
-    Calculate Mach number
-    
-    Parameters:
-    ----------------
-    v -- Speed of projectile (float)
 
-    Returns:
-    ----------------
-    M -- Mach number (float)
+def nWaveAmplitude(M, bulletDiam, bulletLen, xmiss, patm=101e3):
     """
-    csnd = 341.0
-    M = v/csnd
-    return M
+    Calculate N-wave overpressure amplitude
 
-def coneAngle(M):
+    Parameters
+    ----------
+    M -- Mach number
+    bulletDiam -- bullet diameter in m
+    bulletLen -- bullet length in m
+    xmiss -- miss distance in m
+    patm -- atmosperic pressure in Pa
+
+    Returns
+    -------
+    pmax -- N-wave overpressure amplitude in Pa
     """
-    Calculate the cone angle
-    
-    Parameters:
-    ----------------
-    M -- Mach number (float)
-    
-    Returns:
-    ----------------
-    theta -- Mach cone angle in radians (float)
-    
-    """
-    theta = np.arcsin(1.0/M)
-    return theta
-    
-def missDistance(xgun, ngun, xmic):
-    """
-    Calculate miss distance
-    
-    Parameters:
-    ----------------
-    xgun -- Gun position (3x1 numpy array)
-    ngun -- Barrel look direction (3x1 numpy array)
-    xmic -- Microphone position (3x1 numpy array)
-                    
-    Returns:
-    ----------------
-    dmis -- Miss distance in m (float)
-    dlin -- Distance from gun to the mic line in m (float)
-    """
-    xmic = np.array(xmic)  # Microphone position
-    xgun = np.array(xgun)  # Gun position
-    mvec = xmic - xgun  # Vector from mic to gun position
-    dvec = np.sqrt(np.dot(mvec, mvec))  # Distance from gun to mic
-    dlin = np.dot(mvec, ngun)  # Distance from gun to the mic line
-    dmis = np.sqrt(np.power(dvec, 2) - np.power(dlin, 2))  # Miss distance
-    return dmis, dlin
+    pmax = 0.53 * patm * bulletDiam * ((M ** 2 - 1) ** 0.125) / (
+            (xmiss ** 0.75) * (bulletLen ** 0.25))
+    return pmax
 
 
-def nWaveOverPressure(v, d, l, x):
-    """
-    Calculate N-wave overpressure
-    
-    Parameters:
-    ----------------
-    v -- Projectile velocity in m/s (float)
-    d -- Projectile diameter im m (float)
-    l -- Projectile length in m (float)
-    x -- Miss distance in m (float)
-                    
-    Returns:
-    ----------------
-    delP -- N-wave overpressure in Pa (float)
-    """
-    P0 = 101.0e3 # Ambient pressure in Pa
-    M = MachNumber(v)
-    delP = 0.53*d*np.power((np.power(M,2)-1), 0.125)/(np.power(x,0.75)*np.power(l,0.25))*P0
-    return delP
-    
-def nWaveDuration(v, d, l, x):
+def nWaveDuration(M, bulletDiam, bulletLen, xmiss, csnd=341):
     """
     Calculate N-wave period
     
-    Parameters:
-    ----------------
-    v -- Projectile velocity in m/s (float)
-    d -- Projectile diameter im m (float)
-    l -- Projectile length in m (float)
-    x -- Miss distance in m (float)
-                    
-    Returns:
-    ----------------
-    Td -- N-wave perios in s (float)
+    Parameters
+    ----------
+    M -- Mach number
+    bulletDiam -- bullet diameter in m
+    bulletLen -- bullet length in m
+    xmiss -- miss distance in m
+    csnd -- speed of sound in m/s
+
+    Returns
+    -------
+    Td -- N-wave period in s
     """
-    cs = 341.0
-    M = MachNumber(v)
-    L = 1.82*d*(M*np.power(x,0.25))/(np.power(np.power(M,2)-1,0.375)*np.power(l,0.25))
-    Td = L/cs
+    L = 1.82 * bulletDiam * M * (xmiss ** 0.25) / (
+            ((M ** 2 - 1) ** 0.375) * (bulletLen ** 0.25))
+    Td = L / csnd
     return Td
 
-def nWaveTimeOfArrival(v, xgun, ngun, xmic):
+
+def nWaveTimeOfArrival(r, theta, cone_angle, velocity, csnd=341):
     """
-    Calculate miss distance
-    
-    Parameters:
-    ----------------
-    v -- Projectile velocity in m/s (float)
-    xgun -- Gun position (3x1 numpy array)
-    ngun -- Barrel look direction (3x1 numpy array)
-    xmic -- Microphone position (3x1 numpy array)
-                    
-    Returns:
-    ----------------
-    ta -- N-wave time-of-arrival in s (float)
+    Calculate N-wave time of arrival
+
+    Parameters
+    ----------
+    r -- the dist to the mic in m
+    theta -- the angle between the gun look and the mic in rads
+    cone_angle -- cone Mach angle in rads
+    velocity -- projectile velocity in m/s
+    csnd -- speed of sound in m/s
+
+    Returns
+    -------
+    ta -- N-wave time of arrival in s
     """
-    cs = 341.0
-    M = MachNumber(v)
-    th =coneAngle(M)
-    dmis, dlin = missDistance(xgun, ngun, xmic)
-    ta = np.cos(th)*dmis/cs + dlin/v
-    # ta = (dlin-dmis*np.tan(th))/v + dmis/np.cos(th)/cs
+    xmiss = r * np.sin(theta)
+    bullet_travel = r * np.cos(theta)
+    sound_travel = xmiss * np.cos(cone_angle)
+    ta = bullet_travel / velocity + sound_travel / csnd
     return ta
 
-def nWaveRiseTime(pmax):
+
+def nWaveRiseTime(pmax, patm=101e3, csnd=341, lamb=6.8e-8):
     """
     Calculate N-wave rise time
-  
-    Parameters:
-    ----------------
-    pmax -- N-wave overpressure in Pa (float)
-    
-    Returns:
-    ----------------
-    trise -- N-wave rise time in s (float)
+
+    Parameters
+    ----------
+    pmax -- N-wave overpressure amplitude in Pa
+    patm -- atmospheric pressure in Pa
+    csnd -- speed of sound in m/s
+    lamb -- air molecular mean free path
+
+    Returns
+    -------
+    trise -- N-wave rise time in s
     """
-    lamb = 68.0e-9 # Molecular mean free path
-    P0 = 101.0e3
-    cs = 341.0
-    trise = lamb/cs*P0/pmax
-    
+    trise = (lamb / csnd) * (patm / pmax)
     return trise
     
 
-
-def nWave(xgun, ngun, xmic, v, d, l, x, t):
+def nWave(t_interval, gun: Gun, geometry: Geometry, patm=101e3, csnd=341):
     """
-    Calculate the value of N-wave at the given time
-    """
-    pmax = nWaveOverPressure(v, d, l, x)
-    ta = nWaveTimeOfArrival(v, xgun, ngun, xmic)
-    Td = nWaveDuration(v, d, l, x)
+    Calculate the N-wave (shock wave) at the microphone position.
 
-    tr = nWaveRiseTime(pmax)
+    If the projectile velocity speed is smaller than the speed of sound or the
+    observer position is in the initial Mach cone, no sonic boom will be
+    detected, and a None is returned.
 
-    if t < ta:
-        wv = 0
-    elif ta < t <= ta + tr:
-        wv = (t - ta) / tr * pmax
-    elif ta + tr < t <= ta + Td - tr:
-        wv = (1 - 2 * (t - ta - tr) / (Td - 2 * tr)) * pmax
-    elif ta + Td - tr < t <= ta + Td:
-        wv = (-1.0 + (t - ta - Td + tr) / tr) * pmax
-    else:
-        wv = 0
-
-    return wv
-
-
-def calculateNWave(t_interval, gun: Gun, geometry: Geometry):
-    """
-    Calculate N-wave signal
-    
-    Parameters:
-    ----------------
+    Parameters
+    ----------
     xgun -- Gun position (3x1 numpy array)
     ngun -- Barrel look direction (3x1 numpy array)
     xmic -- Microphone position (3x1 numpy array)
@@ -183,13 +108,35 @@ def calculateNWave(t_interval, gun: Gun, geometry: Geometry):
     l -- Projectile length in m (float)
     x -- Miss distance in m (float)
 
-    Returns:
-    ----------------
-    nw -- N-wave signal (numpy array)
+    Returns
+    -------
+    Pnw -- N-wave pressure signal (numpy array)
     """
-    wv = np.zeros(len(t_interval))
+    if gun.velocity <= csnd:
+        # supersonic speed is required
+        return None
+    M = gun.mach_number(csnd)
+    cone_angle = gun.cone_angle(M)
     r, theta = geometry.mic_coords_polar()
-    xmiss = r * np.sin(theta)
-    for ind in range(len(t_interval)):
-        wv[ind] = nWave(geometry.xgun, geometry.ngun, geometry.xmic, gun.velocity, gun.bulletDiam, gun.bulletLen, xmiss, t_interval[ind])
-    return wv
+    if cone_angle > np.pi - theta:
+        # the observer won't see the sonic boom
+        return None
+
+    t = t_interval
+    Pnw = np.zeros_like(t)
+    xmiss = geometry.xmiss
+    pmax = nWaveAmplitude(M, bulletDiam=gun.bulletDiam,
+                          bulletLen=gun.bulletLen, xmiss=xmiss, patm=patm)
+    ta = nWaveTimeOfArrival(r, theta, cone_angle, gun.velocity, csnd=csnd)
+    Td = nWaveDuration(M, bulletDiam=gun.bulletDiam, bulletLen=gun.bulletLen,
+                       xmiss=xmiss, csnd=csnd)
+    tr = nWaveRiseTime(pmax, patm=patm, csnd=csnd)
+
+    mask_rise1 = (t > ta) & (t <= ta + tr)
+    mask_fall = (t > ta + tr) & (t <= ta + Td - tr)
+    mask_rise2 = (t > ta + Td - tr) & (t < ta + Td)
+    Pnw[mask_rise1] = pmax * (t[mask_rise1] - ta) / tr
+    Pnw[mask_fall] = pmax * (1 - 2 * (t[mask_fall] - (ta + tr)) / (
+            Td - 2 * tr))
+    Pnw[mask_rise2] = pmax * ((t[mask_rise2] - (ta + Td - tr)) / tr - 1)
+    return Pnw

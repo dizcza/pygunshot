@@ -51,10 +51,10 @@ namespace GunShot {
          *
          * @param M     - the Mach number
          * @param gamma - specific heat ratio for exiting propellant gas
-         * @param pinf  - atmospheric pressure at t=inf
+         * @param patm  - atmospheric pressure at t=inf
          * @returns the momentum index
          */
-        float momentumIndex(float M, float gamma = GAMMA, float pinf = ATMOSPHERIC_PRESSURE) const;
+        float momentumIndex(float M, float gamma = GAMMA, float patm = ATMOSPHERIC_PRESSURE) const;
 
         /* Calculates the Mach cone angle.
          *
@@ -97,7 +97,7 @@ namespace GunShot {
      * @param csnd      - the speed of sound
      * @param gamma     - specific heat ratio for exiting propellant gas
      */
-    void getMuzzleBlastAtDistance(float *pmb, const float *tInterval, int32_t nPoints, const Gun &gun, float r, float theta, float csnd = SOUND_SPEED, float gamma = GAMMA);
+    void muzzleBlast(float *pmb, const float *tInterval, int32_t nPoints, const Gun &gun, float r, float theta, float csnd = SOUND_SPEED, float gamma = GAMMA);
 
     /* Friedlander model of a muzzle blast wave.
      *
@@ -131,9 +131,9 @@ namespace GunShot {
      * @param theta - the angle between the boreline and the microphone position in radians
      * @param csnd  - the speed of sound
      * @param gamma - specific heat ratio for exiting propellant gas
-     * @param pinf  - atmospheric pressure at t=inf
+     * @param patm  - atmospheric pressure at t=inf
      */
-    void scalingLength(float *l, float *lp, const Gun &gun, float theta, float csnd = SOUND_SPEED, float gamma = GAMMA, float pinf = ATMOSPHERIC_PRESSURE);
+    void scalingLength(float *l, float *lp, const Gun &gun, float theta, float csnd = SOUND_SPEED, float gamma = GAMMA, float patm = ATMOSPHERIC_PRESSURE);
 
     /* Calculates the peak overpressure of the muzzle blast.
      *

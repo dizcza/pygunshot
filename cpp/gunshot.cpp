@@ -42,11 +42,11 @@ namespace GunShot {
      *
      * @param M     - the Mach number
      * @param gamma - specific heat ratio for exiting propellant gas
-     * @param pinf  - atmospheric pressure at t=inf
+     * @param patm  - atmospheric pressure at t=inf
      * @returns the momentum index
      */
-    float Gun::momentumIndex(float M, float gamma, float pinf) const {
-        float pe = this->pexit / pinf;
+    float Gun::momentumIndex(float M, float gamma, float patm) const {
+        float pe = this->pexit / patm;
         float xmod = M * sqrt(gamma * pe / 2);
         float mu = 0.83f - 0.0063f * xmod;
         return mu;
@@ -93,7 +93,7 @@ namespace GunShot {
     void getAnechoicGunShotAtDistance(float *pmb, const float *tInterval, int32_t nPoints, const Geometry &geometry, const Gun &gun, float csnd, float gamma) {
         float r, theta;
         micPolarCoordsFromGeometry(&r, &theta, geometry);
-        getMuzzleBlastAtDistance(pmb, tInterval, nPoints, gun, r, theta, csnd, gamma);
+        muzzleBlast(pmb, tInterval, nPoints, gun, r, theta, csnd, gamma);
         // TODO: add shock wave
     }
 
@@ -110,7 +110,7 @@ namespace GunShot {
      * @param csnd      - the speed of sound
      * @param gamma     - specific heat ratio for exiting propellant gas
      */
-    void getMuzzleBlastAtDistance(float *pmb, const float *tInterval, int32_t nPoints, const Gun &gun, float r, float theta, float csnd, float gamma) {
+    void muzzleBlast(float *pmb, const float *tInterval, int32_t nPoints, const Gun &gun, float r, float theta, float csnd, float gamma) {
         float l, lp;
         scalingLength(&l, &lp, gun, theta, csnd, gamma);
         float ta = timeOfArrival(r, lp, csnd);
@@ -172,15 +172,17 @@ namespace GunShot {
      * @param theta - the angle between the boreline and the microphone position in radians
      * @param csnd  - the speed of sound
      * @param gamma - specific heat ratio for exiting propellant gas
-     * @param pinf  - atmospheric pressure at t=inf
+     * @param patm  - atmospheric pressure at t=inf
      */
-    void scalingLength(float *l, float *lp, const Gun &gun, float theta, float csnd, float gamma, float pinf) {
+    void scalingLength(float *l, float *lp, const Gun &gun, float theta, float csnd, float gamma, float patm) {
         float M = gun.machNumber(csnd);
-        float mu = gun.momentumIndex(M, gamma, pinf);
-        float peb = gun.pexit / pinf;
+        float mu = gun.momentumIndex(M, gamma, patm);
+        float peb = gun.pexit / patm;
         // Energy deposition rate, eq. 2
         float dEdT = (gamma * peb * gun.velocity) / (gamma - 1) * (1 + (gamma - 1) / 2 * M * M) * gun.boreArea;
-        *l = sqrt(dEdT / (pinf * csnd));
+        *l = sqrt(dEdT / (patm * csnd));
+        // TODO find a better constant for the scaling length
+        (*l) *= 10;
         float ratio = mu * cos(theta) + sqrt(1 - pow(mu * sin(theta), 2));
         *lp = (*l) * ratio;
     }
