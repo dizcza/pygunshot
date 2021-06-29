@@ -16,8 +16,11 @@ def seismicPulse(t_interval, ta, c, A, k, X, omega, theta, V, T):
        Series (Vol. 1015, No. 5, p. 052025). IOP Publishing.
     """
     t = t_interval - ta
-    Pmb = c * A * np.cos(k * X - omega * t + theta) / np.cosh((X - V * t) / T)
-    Pmb[t_interval < ta] = 0
+    Pmb = np.zeros_like(t_interval)
+    mask_onset = t > 0
+    t = t[mask_onset]
+    Pmb[mask_onset] = c * A * np.cos(k * X - omega * t + theta) / np.cosh(
+        (X - V * t) / T)
     return Pmb
 
 
@@ -37,8 +40,10 @@ def friedlanderMW(t_interval, ta, amplitude, tau=0.05):
     Pmb -- estimated muzzle blast pressure along the given time intervals
     """
     x = (t_interval - ta) / tau
-    Pmb = amplitude * (1 - x) * np.exp(-x)
-    Pmb[t_interval < ta] = 0
+    Pmb = np.zeros_like(t_interval)
+    mask_onset = x > 0
+    x = x[mask_onset]
+    Pmb[mask_onset] = amplitude * (1 - x) * np.exp(-x)
     return Pmb
 
 
@@ -60,8 +65,11 @@ def berlageMW(t_interval, ta, amplitude, nr=5, alpha=0.52, freq=20, phase=0):
     Pmb -- estimated muzzle blast pressure along the given time intervals
     """
     t = t_interval - ta
-    Pmb = amplitude * t ** nr * np.exp(-alpha * t) * np.sin(freq * t + phase)
-    Pmb[t_interval < ta] = 0
+    Pmb = np.zeros_like(t_interval)
+    mask_onset = t > 0
+    t = t[mask_onset]
+    Pmb[mask_onset] = amplitude * t ** nr * np.exp(-alpha * t) * np.sin(
+        freq * t + phase)
     return Pmb
 
 
