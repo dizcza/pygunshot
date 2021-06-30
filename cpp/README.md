@@ -1,6 +1,6 @@
-# C++ implementation of pygunshot [1] - muzzle blast gunshot propagation
+# C++ implementation of pygunshot [1]
 
-Shock wave is not yet implemented.
+Muzzle blast and shock wave components are implemented.
 
 ## Compile and run
 
@@ -8,11 +8,6 @@ Shock wave is not yet implemented.
 g++ gunshot.cpp usage.cpp -o gunshot.o
 ./gunshot.o
 ```
-
-Two files will be generated:
-
-* `output_at_source_point.float32` - simulated muzzle blast at the source point (barrel exit)
-* `output_at_distance.float32` - simulated muzzle blast wave at the microphone
 
 ## Visualize the results in Python
 

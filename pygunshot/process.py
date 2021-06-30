@@ -85,6 +85,7 @@ def getAnechoicGunShot(t_interval, geometry: Geometry, gun: Gun, Fs=96000,
         if reflection:
             sig += getReflectedNWave()
 
+    # Neglect the fact that reflected waves covered a larger distance
     sig = atmosphericAttenuation(sig, distance=r, Fs=Fs)
 
     return sig, Pmb, Pnw

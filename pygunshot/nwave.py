@@ -48,7 +48,7 @@ def nWaveDuration(M, bulletDiam, bulletLen, xmiss, csnd=341):
     return Td
 
 
-def nWaveTimeOfArrival(r, theta, cone_angle, velocity, csnd=341):
+def nWaveTimeOfArrival(r, theta, velocity, csnd=341):
     """
     Calculate N-wave time of arrival
 
@@ -56,7 +56,6 @@ def nWaveTimeOfArrival(r, theta, cone_angle, velocity, csnd=341):
     ----------
     r -- the dist to the mic in m
     theta -- the angle between the gun look and the mic in rads
-    cone_angle -- cone Mach angle in rads
     velocity -- projectile velocity in m/s
     csnd -- speed of sound in m/s
 
@@ -66,6 +65,8 @@ def nWaveTimeOfArrival(r, theta, cone_angle, velocity, csnd=341):
     """
     xmiss = r * np.sin(theta)
     bullet_travel = r * np.cos(theta)
+    M = velocity / csnd
+    cone_angle = np.arcsin(1. / M)
     sound_travel = xmiss * np.cos(cone_angle)
     ta = bullet_travel / velocity + sound_travel / csnd
     return ta
@@ -107,7 +108,7 @@ def nWaveRiseTime(pmax, patm=101e3, csnd=341, lamb=6.8e-8):
     pmax -- N-wave overpressure amplitude in Pa
     patm -- atmospheric pressure in Pa
     csnd -- speed of sound in m/s
-    lamb -- air molecular mean free path
+    lamb -- air molecular mean free path in m
 
     Returns
     -------
@@ -155,7 +156,7 @@ def nWave(t_interval, gun: Gun, geometry: Geometry, patm=101e3, csnd=341):
     xmiss = r * np.sin(theta)  # shortest dist to the bullet trajectory
     pmax = nWaveAmplitude(M, bulletDiam=gun.bulletDiam,
                           bulletLen=gun.bulletLen, xmiss=xmiss, patm=patm)
-    ta = nWaveTimeOfArrival(r, theta, cone_angle, gun.velocity, csnd=csnd)
+    ta = nWaveTimeOfArrival(r, theta, gun.velocity, csnd=csnd)
     Td = nWaveDuration(M, bulletDiam=gun.bulletDiam, bulletLen=gun.bulletLen,
                        xmiss=xmiss, csnd=csnd)
     tr = nWaveRiseTime(pmax, patm=patm, csnd=csnd)

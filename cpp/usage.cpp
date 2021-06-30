@@ -5,40 +5,39 @@
 #define SAMPLING_RATE 96000  // Hz
 
 /* Minimal code to read and display the output signal in Python
->>> import matplotlib.pyplot as plt
->>> import numpy as np
->>> pmb = np.fromfile("output.float32", dtype=np.float32)
->>> plt.plot(pmb)
->>> plt.show()
+  >>> import matplotlib.pyplot as plt
+  >>> import numpy as np
+  >>> Pmb = np.fromfile("output.float32", dtype=np.float32)
+  >>> plt.plot(Pmb)
+  >>> plt.show()
  */
 
 
 /* Simulate the muzzle blast wave propagation at the mic location.*/
 void test_getAnechoicGunShotAtDistance() {
-    const float duration = 1.5f;  // in s
+    const float duration = 0.1f;  // in s
     const int32_t nPoints = (int32_t) (duration * SAMPLING_RATE);
     float tInterval[nPoints];
-    float pmb[nPoints];
-    for (int i = 0; i < nPoints; i++) {
-        tInterval[i] = i * 1.f / nPoints;
+    float Pmb[nPoints];
+    for (int32_t i = 0; i < nPoints; i++) {
+        tInterval[i] = i * 1.f / SAMPLING_RATE;
     }
 
     // Values are taken from ExampleGeometry.json
     float xgun[] = {4.25, 3.0, 1.25};
     float ngun[] = {0, 1, 0};
     float xmic[] = {8.05, 22.0, 1.5};
-    GunShot::Geometry geom;
-    GunShot::initGeometry(geom, xgun, xmic, ngun);
+    Gunshot::Geometry geom;
+    Gunshot::initGeometry(geom, xgun, xmic, ngun);
 
-    // 300ShortMagnum.json
-    GunShot::Gun gun(0.0091, 0.0182, 0.1016, 2646.8, 221, "300 Short Magnum", ".357 Magnum");
+    // RossiMagnumR971.json
+    Gunshot::Gun gun(0.0091, 0.0182, 0.1016, 2817.0, 388, "Rossi Magnum R971", ".357 Magnum");
 
     // Call the main function
-    getAnechoicGunShotAtDistance(pmb, tInterval, nPoints, geom, gun);
+    Gunshot::getAnechoicGunshotAtDistance(Pmb, tInterval, nPoints, geom, gun);
 
-    // Read in Python with `pmb = np.fromfile(f, dtype=np.float32)`
-    FILE *f = fopen("output_at_distance.float32", "w");
-    fwrite(pmb, sizeof(float), nPoints, f);
+    FILE *f = fopen("output_total.float32", "w");
+    fwrite(Pmb, sizeof(float), nPoints, f);
     fclose(f);
 }
 
@@ -46,20 +45,44 @@ void test_getAnechoicGunShotAtDistance() {
  * exit) of the specified length (duration) in s.
  */
 void test_MuzzleBlastGeneration() {
-    const float duration = 1.5f;  // in s
+    const float duration = 0.1f;  // in s
     const int32_t nPoints = (int32_t) (duration * SAMPLING_RATE);
     float tInterval[nPoints];
-    float pmb[nPoints];
-    for (int i = 0; i < nPoints; i++) {
-        tInterval[i] = i * 1.f / nPoints;
+    float Pmb[nPoints];
+    for (int32_t i = 0; i < nPoints; i++) {
+        tInterval[i] = i * 1.f / SAMPLING_RATE;
     }
 
-//    GunShot::berlageMW(pmb, tInterval, nPoints, 0, 300, 5, 0.52f, 20);
-    GunShot::friedlanderMW(pmb, tInterval, nPoints, 0, 300, 0.05f);
+    float ta = 0.05623617307421957;
+    float tau = 0.0006669207333907665;
+    float amplitude = 236.53990944414042;
+    MuzzleBlast::friedlander(Pmb, tInterval, nPoints, ta, amplitude, tau);
 
-    // Read in Python with `pmb = np.fromfile(f, dtype=np.float32)`
-    FILE *f = fopen("output_at_source_point.float32", "w");
-    fwrite(pmb, sizeof(float), nPoints, f);
+    FILE *f = fopen("Pmb_example.float32", "w");
+    fwrite(Pmb, sizeof(float), nPoints, f);
+    fclose(f);
+}
+
+
+void test_NWaveGeneration() {
+    const float duration = 0.1f;  // in s
+    const int32_t nPoints = (int32_t) (duration * SAMPLING_RATE);
+    float tInterval[nPoints];
+    float Pnw[nPoints];
+    for (int32_t i = 0; i < nPoints; i++) {
+        tInterval[i] = i * 1.f / SAMPLING_RATE;
+    }
+
+    // RossiMagnumR971 with the example geometry
+    float pmax = 417.5844224926806;
+    float ta = 0.05429687354014838;
+    float theta = 0.19781125425388243;
+    float Td = 0.0003323567661332675;
+    float tr = 4.823159432796164e-08;
+    NWave::generateNWave(Pnw, tInterval, nPoints, pmax, ta, Td, tr);
+
+    FILE *f = fopen("Pnw_example.float32", "w");
+    fwrite(Pnw, sizeof(float), nPoints, f);
     fclose(f);
 }
 
@@ -67,5 +90,6 @@ void test_MuzzleBlastGeneration() {
 int main() {
     test_getAnechoicGunShotAtDistance();
     test_MuzzleBlastGeneration();
+    test_NWaveGeneration();
     return 0;
 }

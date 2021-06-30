@@ -11,11 +11,14 @@ extern "C" {
 
 #include <string>
 
-#define SOUND_SPEED           341
-#define GAMMA                 1.24f
-#define ATMOSPHERIC_PRESSURE  101000
+// Default parameters
+#define SOUND_SPEED                   341
+#define GAMMA                         1.24f
+#define ATMOSPHERIC_PRESSURE          101000
+#define AIR_MOLECULAR_MEAN_FREE_PATH  6.8e-8
 
-namespace GunShot {
+
+namespace Gunshot {
     class Gun {
     public:
         float bulletDiam;  // Bullet diameter in m
@@ -51,7 +54,7 @@ namespace GunShot {
          *
          * @param M     - the Mach number
          * @param gamma - specific heat ratio for exiting propellant gas
-         * @param patm  - atmospheric pressure at t=inf
+         * @param patm  - atmospheric pressure in Pa
          * @returns the momentum index
          */
         float momentumIndex(float M, float gamma = GAMMA, float patm = ATMOSPHERIC_PRESSURE) const;
@@ -71,57 +74,86 @@ namespace GunShot {
     } Geometry;
 
     /* Main function.
-     * It estimates the total pressure signal given a geometry, a gun, and time intervals.
-     * Currently, only the muzzle blast is calculated (the shock wave will be added later).
+     * It estimates the total pressure signal (muzzle blast + N-wave) given
+     * a geometry, a gun, and time intervals.
      *
-     * @param pmb       - estimated muzzle blast pressure (a vec of size nPoints) along the given time intervals
+     * @param signal    - estimated total pressure signal in Pa (muzzle blast + N-Wave)
      * @param tInterval - equally spaced time array in s
-     * @param nPoints   - the length of `tInterval` and `pmb`
+     * @param nPoints   - the length of `tInterval` and `signal`
      * @param geometry  - the environment geometry structure (coordinates)
      * @param gun       - the gun
+     * @param patm      - atmospheric pressure in Pa
      * @param csnd      - the speed of sound
      * @param gamma     - specific heat ratio for exiting propellant gas
      */
-    void getAnechoicGunShotAtDistance(float *pmb, const float *tInterval, int32_t nPoints, const Geometry &geometry, const Gun &gun, float csnd = SOUND_SPEED, float gamma = GAMMA);
+    void getAnechoicGunshotAtDistance(float *signal, const float *tInterval, int32_t nPoints, const Geometry &geometry, const Gun &gun, float patm = ATMOSPHERIC_PRESSURE, float csnd = SOUND_SPEED, float gamma = GAMMA);
 
-    /***************** MUZZLE BLAST *****************/
+    /***************** ENVIRONMENT *****************/
 
+    /* Initialize the Geometry structure.
+     *
+     * @param geometry - Geometry object to be initialized
+     * @param xgun - gun 3D coordinates
+     * @param xmic - mic 3D coordinates
+     * @param ngun - gun barren look 3D direction
+     */
+    void initGeometry(Geometry &geometry, const float *xgun, const float *xmic, const float *ngun);
+
+    /* Get polar coordinates (r and theta) of the mic w.r.t. the barrel.
+     *
+     * @param r        - (to be written) the distance between the gun and the microphone
+     * @param theta    - (to be written) the angle between the boreline and the microphone position in radians
+     * @param geometry - the environment geometry structure (coordinates)
+     */
+    void micPolarCoordsFromGeometry(float *r, float *theta, const Geometry &geometry);
+
+    /* Calculates the speed of sound adjusted by the air temperature.
+     *
+     * @param temperature - the air temperature in Celsius
+     * @returns the speed of sound in m/s
+     */
+    float getSoundSpeed(float temperature);
+
+}  /* namespace Gunshot */
+
+
+namespace MuzzleBlast {
     /* Calculates the muzzle blast wave at the microphone position
      *
-     * @param pmb       - estimated muzzle blast pressure (a vec of size nPoints) along the given time intervals
+     * @param Pmb       - estimated muzzle blast pressure (array of size nPoints) along the given time intervals
      * @param tInterval - equally spaced time array in s
-     * @param nPoints   - the length of `tInterval` and `pmb`
+     * @param nPoints   - the length of `tInterval` and `Pmb`
      * @param gun       - the gun
      * @param r         - the distance between the gun and the microphone
      * @param theta     - the angle between the boreline and the microphone position in radians
      * @param csnd      - the speed of sound
      * @param gamma     - specific heat ratio for exiting propellant gas
      */
-    void muzzleBlast(float *pmb, const float *tInterval, int32_t nPoints, const Gun &gun, float r, float theta, float csnd = SOUND_SPEED, float gamma = GAMMA);
+    void muzzleBlast(float *Pmb, const float *tInterval, int32_t nPoints, const Gunshot::Gun &gun, float r, float theta, float csnd = SOUND_SPEED, float gamma = GAMMA);
 
     /* Friedlander model of a muzzle blast wave.
      *
-     * @param pmb       - estimated muzzle blast pressure (a vec of size nPoints) along the given time intervals
+     * @param Pmb       - estimated muzzle blast pressure (array of size nPoints) along the given time intervals
      * @param tInterval - equally spaced time array in s
-     * @param nPoints   - the length of `tInterval` and `pmb`
+     * @param nPoints   - the length of `tInterval` and `Pmb`
      * @param ta        - the time of arrival in s
      * @param amplitude - the pressure amplitude in Pa
      * @param tau       - positive phase duration in s
      */
-    void friedlanderMW(float *pmb, const float *tInterval, int32_t nPoints, float ta, float amplitude, float tau = 0.05f);
+    void friedlander(float *Pmb, const float *tInterval, int32_t nPoints, float ta, float amplitude, float tau);
 
     /* Berlage model of a muzzle blast wave.
      *
-     * @param pmb       - estimated muzzle blast pressure (a vec of size nPoints) along the given time intervals
+     * @param Pmb       - estimated muzzle blast pressure (array of size nPoints) along the given time intervals
      * @param tInterval - equally spaced time array in s
-     * @param nPoints   - the length of `tInterval` and `pmb`
+     * @param nPoints   - the length of `tInterval` and `Pmb`
      * @param ta        - the time of arrival in s
      * @param amplitude - the pressure amplitude in Pa
      * @param nr        - the rate of rising of the front edge of the MW
      * @param alpha     - the attenuation rate of the MW
      * @param freq      - the dominant frequency of the MW
      */
-    void berlageMW(float *pmb, const float *tInterval, int32_t nPoints, float ta, float amplitude, float nr = 5, float alpha = 0.52f, float freq = 20);
+    void berlage(float *Pmb, const float *tInterval, int32_t nPoints, float ta, float amplitude, float nr = 5, float alpha = 0.52f, float freq = 20);
 
     /* Calculates the scaling length `l` and the direction weighted scaling length `lp`.
      *
@@ -131,9 +163,9 @@ namespace GunShot {
      * @param theta - the angle between the boreline and the microphone position in radians
      * @param csnd  - the speed of sound
      * @param gamma - specific heat ratio for exiting propellant gas
-     * @param patm  - atmospheric pressure at t=inf
+     * @param patm  - atmospheric pressure in Pa
      */
-    void scalingLength(float *l, float *lp, const Gun &gun, float theta, float csnd = SOUND_SPEED, float gamma = GAMMA, float patm = ATMOSPHERIC_PRESSURE);
+    void scalingLength(float *l, float *lp, const Gunshot::Gun &gun, float theta, float csnd = SOUND_SPEED, float gamma = GAMMA, float patm = ATMOSPHERIC_PRESSURE);
 
     /* Calculates the peak overpressure of the muzzle blast.
      *
@@ -164,32 +196,88 @@ namespace GunShot {
      */
     float positivePhaseDuration(float r, float lp, float l, float barrelLen, float velocity, float csnd = SOUND_SPEED);
 
-    /***************** ENVIRONMENT *****************/
+}  /* namespace MuzzleBlast */
 
-    /* Initialize the Geometry structure.
+
+namespace NWave {
+
+    /* Generate an N-wave.
      *
-     * @param geometry - Geometry object to be initialized
-     * @param xgun - gun 3D coordinates
-     * @param xmic - mic 3D coordinates
-     * @param ngun - gun barren look 3D direction
+     * @param Pnw       - estimated N-wave pressure (array of size nPoints) along the given time intervals
+     * @param tInterval - equally spaced time array in s
+     * @param nPoints   - the length of `tInterval` and `Pnw`
+     * @param pmax      - N-wave amplitude in Pa
+     * @param ta        - N-wave time of arrival in s
+     * @param Td        - N-wave total duration in s
      */
-    void initGeometry(Geometry &geometry, const float *xgun, const float *xmic, const float *ngun);
+    void generateNWave(float *Pnw, const float *tInterval, int32_t nPoints, float pmax, float ta, float Td, float tr);
 
-    /* Get polar coordinates (r and theta) of the mic w.r.t. the barrel.
+    /* Calculate the N-wave component at the microphone position.
      *
-     * @param r        - (to be written) the distance between the gun and the microphone
-     * @param theta    - (to be written) the angle between the boreline and the microphone position in radians
-     * @param geometry - the environment geometry structure (coordinates)
+     * @param Pnw       - estimated N-wave pressure (array of size nPoints) along the given time intervals
+     * @param tInterval - equally spaced time array in s
+     * @param nPoints   - the length of `tInterval` and `signal`
+     * @param gun       - the gun
+     * @param geometry  - the environment geometry structure (coordinates)
+     * @param patm      - atmospheric pressure in Pa
+     * @param csnd      - the speed of sound
+     * @returns
+     *    1, if no N-wave has been observed and `Pnw` is set to zeros
+     *    0, if an N-wave has been observed and `Pnw` contains correct values
      */
-    void micPolarCoordsFromGeometry(float *r, float *theta, const Geometry &geometry);
+    int8_t nWave(float *Pnw, const float *tInterval, int32_t nPoints, const Gunshot::Gun &gun, const Gunshot::Geometry &geometry, float patm = ATMOSPHERIC_PRESSURE, float csnd = SOUND_SPEED);
 
-    /* Calculates the speed of sound adjusted by the air temperature.
+    /* Check whether an N-wave is observed at the microphone position or not.
      *
-     * @param temperature - the air temperature in Celsius
-     * @returns the speed of sound in m/s
+     * @param gun       - the gun
+     * @param geometry  - the environment geometry structure (coordinates)
+     * @param csnd      - the speed of sound
+     * @returns         - true if an N-wave is observed; false, otherwise
      */
-    float getSoundSpeed(float temperature);
+    bool isObserved(const Gunshot::Gun &gun, const Gunshot::Geometry &geometry, float csnd = SOUND_SPEED);
 
-}  /* namespace GunShot */
+    /* Calculate the N-wave rise time.
+     *
+     * @param pmax      - N-wave amplitude in Pa
+     * @param patm      - atmospheric pressure in Pa
+     * @param csnd      - the speed of sound
+     * @param lamb      - air molecular mean free path in m
+     * @returns tr      - the rise time in s
+     */
+    float riseTime(float pmax, float patm = ATMOSPHERIC_PRESSURE, float csnd = SOUND_SPEED, float lamb=AIR_MOLECULAR_MEAN_FREE_PATH);
+
+    /* Calculate the N-wave arrival time.
+     *
+     * @param r         - the distance between the gun and the microphone
+     * @param theta     - the angle between the boreline and the microphone position in radians
+     * @param velocity  - the projectile velocity in m/s
+     * @param csnd      - the speed of sound in m/s
+     * @returns ta      - the time of arrival in s
+     */
+    float timeOfArrival(float r, float theta, float velocity, float csnd = SOUND_SPEED);
+
+    /* Calculate the N-wave total duration time.
+     *
+     * @param M          - the Mach number
+     * @param bulletDiam - the bullet diameter in m
+     * @param bulletLen  - the bullet length in m
+     * @param xmiss      - the shortest dist from the mic to the bullet trajectory in m
+     * @param csnd       - the speed of sound in m/s
+     * @returns Td       - the total duration time in s
+     */
+    float duration(float M, float bulletDiam, float bulletLen, float xmiss, float csnd = SOUND_SPEED);
+
+    /* Calculate the N-wave amplitude.
+     *
+     * @param M          - the Mach number
+     * @param bulletDiam - the bullet diameter in m
+     * @param bulletLen  - the bullet length in m
+     * @param patm       - the atmospheric pressure in Pa
+     * @param csnd       - the speed of sound in m/s
+     * @returns pmax     - the N-wave amplitude in Pa
+     */
+    float amplitude(float M, float bulletDiam, float bulletLen, float xmiss, float patm = ATMOSPHERIC_PRESSURE);
+
+}  /* namespace NWave */
 
 #endif /* GUNSHOT_H */

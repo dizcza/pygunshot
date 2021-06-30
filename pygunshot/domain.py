@@ -101,7 +101,7 @@ class Geometry:
         """
         Returns
         -------
-        xmiss -- dist from the mic to the bullet trajectory in m
+        xmiss -- shortest dist from the mic to the bullet trajectory in m
         """
         r, theta = self.mic_coords_polar()
         xmiss = r * np.sin(theta)
