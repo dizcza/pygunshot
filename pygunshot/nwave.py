@@ -71,6 +71,33 @@ def nWaveTimeOfArrival(r, theta, cone_angle, velocity, csnd=341):
     return ta
 
 
+def nWaveTimeOfArrivalReflected(geometry: Geometry, gun: Gun, csnd=341):
+    """
+    Calculate the time of arrival of the reflected N-wave
+
+    Parameters
+    ----------
+    geometry -- Geometry object
+    gun -- the firearm
+    csnd -- the speed of sound in m/s
+
+    Returns
+    -------
+    ta -- time of arrival in s
+    xsource -- 3D coordinates of the imaginary source where the ray is started
+    """
+    gravity = np.array([0, 0, 1])
+    r, theta = geometry.mic_coords_polar()
+    xmiss = r * np.sin(theta)
+    cone_angle = gun.cone_angle(gun.mach_number(csnd))
+    bullet_travel = r * np.cos(theta) - xmiss * np.tan(cone_angle)
+    xsource = geometry.xgun + bullet_travel * geometry.ngun
+    xsource -= 2 * xsource[2] * gravity
+    sound_travel = np.linalg.norm(xsource - geometry.xmic)
+    ta = bullet_travel / gun.velocity + sound_travel / csnd
+    return ta, xsource
+
+
 def nWaveRiseTime(pmax, patm=101e3, csnd=341, lamb=6.8e-8):
     """
     Calculate N-wave rise time
@@ -111,20 +138,21 @@ def nWave(t_interval, gun: Gun, geometry: Geometry, patm=101e3, csnd=341):
     Returns
     -------
     Pnw -- N-wave pressure signal (numpy array)
+    ta -- time of arrival in s
     """
     if gun.velocity <= csnd:
         # supersonic speed is required
-        return None
+        return None, None
     M = gun.mach_number(csnd)
     cone_angle = gun.cone_angle(M)
     r, theta = geometry.mic_coords_polar()
     if cone_angle > np.pi - theta:
         # the observer won't see the sonic boom
-        return None
+        return None, None
 
     t = t_interval
     Pnw = np.zeros_like(t)
-    xmiss = geometry.xmiss
+    xmiss = r * np.sin(theta)  # shortest dist to the bullet trajectory
     pmax = nWaveAmplitude(M, bulletDiam=gun.bulletDiam,
                           bulletLen=gun.bulletLen, xmiss=xmiss, patm=patm)
     ta = nWaveTimeOfArrival(r, theta, cone_angle, gun.velocity, csnd=csnd)
@@ -139,4 +167,4 @@ def nWave(t_interval, gun: Gun, geometry: Geometry, patm=101e3, csnd=341):
     Pnw[mask_fall] = pmax * (1 - 2 * (t[mask_fall] - (ta + tr)) / (
             Td - 2 * tr))
     Pnw[mask_rise2] = pmax * ((t[mask_rise2] - (ta + Td - tr)) / tr - 1)
-    return Pnw
+    return Pnw, ta

@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from pygunshot.domain import Gun
+from pygunshot.domain import Gun, Geometry
 
 
 def seismicPulse(t_interval, ta, c, A, k, X, omega, theta, V, T):
@@ -93,6 +93,7 @@ def muzzleBlast(t_interval, gun: Gun, distance, theta, patm=101e3, csnd=341,
     Returns
     -------
     Pmb -- Muzzle blast signal (numpy array)
+    ta -- time of arrival in s
     """
     l, lp = scalingLength(gun, theta, patm=patm, csnd=csnd, gamma=gamma)
     ta = timeOfArrival(distance, lp, csnd=csnd)
@@ -100,7 +101,7 @@ def muzzleBlast(t_interval, gun: Gun, distance, theta, patm=101e3, csnd=341,
                                 velocity=gun.velocity, csnd=csnd)
     Pb = peakOverpressure(distance, lp)
     Pmb = friedlanderMW(t_interval, ta, amplitude=Pb * patm, tau=tau)
-    return Pmb
+    return Pmb, ta
 
 
 def scalingLength(gun: Gun, theta, patm=101e3, csnd=341., gamma=1.24):
@@ -175,6 +176,28 @@ def timeOfArrival(r, lp, csnd=341):
     ta_norm = X - 0.52 * np.log(2 * X + 2 * rb + 1.04) - 0.56  # Eq. 27
     ta = ta_norm * lp / csnd  # Eq. 15
     return ta
+
+
+def timeOfArrivalReflected(geometry: Geometry, csnd=341):
+    """
+    Calculate the time of arrival of the reflected muzzle blast wave
+
+    Parameters
+    ----------
+    geometry -- Geometry object
+    csnd -- the speed of sound in m/s
+
+    Returns
+    -------
+    ta -- time of arrival in s
+    xsource -- 3D coordinates of the imaginary source where the ray is started
+    """
+    gravity = np.array([0, 0, 1])
+    xgun = geometry.xgun
+    xsource = xgun - 2 * xgun[2] * gravity
+    sound_travel = np.linalg.norm(xsource - geometry.xmic)
+    ta = sound_travel / csnd
+    return ta, xsource
 
 
 def positivePhaseDuration(r, lp, l, barrelLen, velocity, csnd=341.):

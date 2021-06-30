@@ -1,4 +1,4 @@
 numpy
 scipy
 matplotlib
-acoustics
+acoustics @ git+https://github.com/python-acoustics/python-acoustics.git#egg=acoustics
